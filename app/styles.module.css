@@ -1,0 +1,4 @@
+.fpink {
+  --tw-gradient-from: #fe32d9 var(--tw-gradient-from-position);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}

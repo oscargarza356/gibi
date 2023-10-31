@@ -1,0 +1,47 @@
+// DISCORD ROLE CHECKER
+// // you now have the roles check if one of them is 954459916209381488
+// console.log(guild_id);
+// console.log("response12", data);
+// //loop the roles and check if one of them is 954459916209381488
+// let isMember = false;
+// // check if data.roles is undefined
+// console.log("data.status", data);
+// console.log(response.status);
+// if (data.roles == undefined) {
+//   console.log("data.status", data.status);
+//   if (response.status != 429) {
+//     // rate limited
+//     isMember = false;
+//     setIsMember(false);
+//   } else if (isMember == false) {
+//     setError("discord rate limit hit, please try again in" + data.retry_after + "seconds");
+//   }
+// } else {
+//   for (let i = 0; i < data.roles.length; i++) {
+//     if (data.roles[i] == "954459916209381488") {
+//       isMember = true;
+//       console.log("isMember", isMember);
+//       setIsMember(true);
+//       break;
+//     }
+//   }
+//   console.log("isMember2213", isMember);
+//   console.log("X-RateLimit-Bucket", response.headers.get("x-ratelimit-bucket"));
+//   // check that the user is not part of banned avatars
+//   let bannedAvatars = [
+//     "5445ffd7ffb201a98393cbdf684ea4b1",
+//     "8569adcbd36c70a7578c017bf5604ea5",
+//     "1628fc11e7961d85181295493426b775",
+//     "c82b3fa769ed6e6ffdea579381ed5f5c",
+//     "6c5996770c985bcd6e5b68131ff2ba04",
+//     "157e517cdbf371a47aaead44675714a3",
+//     "f7f2e9361e8a54ce6e72580ac7b967af",
+//     "79ee349b6511e2000af8a32fb8a6974e",
+//   ];
+//   if (bannedAvatars.includes(data["user"]["avatar"])) {
+//     isMember = false;
+//     setIsMember(false);
+//   }
+//   console.log("isMember", isMember);
+//   // token has not expired
+// }
