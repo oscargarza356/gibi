@@ -44,13 +44,9 @@ export default function DrawWinner() {
         console.log("data", data);
         setGiveawayInfo(data);
         // load nft image
-        const publicClient = getPublicClient({
-          chainId: 137,
-        });
         console.log("giveawayInfo.token", data.nft_token_id);
-        const response2 = await alchemy.nft.getNftMetadata(data.nft_contract_Address, data.nft_token_id);
-        setNFTImage(response2?.media[0].gateway);
-        setNFTName(response2?.rawMetadata?.name as any);
+        setNFTImage(data.image_link);
+        setNFTName(data.prize);
       })
       .catch((error) => {
         console.error("Error:", error);
@@ -149,7 +145,7 @@ export default function DrawWinner() {
           </h1>
         </div>
         <div className="flex items-center justify-center">
-          <img src={NFTImage} width={250} height={250} className="rounded-xl shadow-md dark:shadow-gray-800" />
+          <Image src={NFTImage} alt="Prize Image" width={250} height={250} className="rounded-xl shadow-md dark:shadow-gray-800" />
         </div>
         <h1
           className={

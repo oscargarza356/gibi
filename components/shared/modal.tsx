@@ -38,14 +38,12 @@ export default function Modal({
     <AnimatePresence>
       {showModal && (
         <>
-          {isMobile && <Leaflet setShow={setShowModal}>{children}</Leaflet>}
-          {isDesktop && (
             <>
               <FocusTrap focusTrapOptions={{ initialFocus: false }}>
                 <motion.div
                   ref={desktopModalRef}
                   key="desktop-modal"
-                  className="fixed inset-0 z-40 hidden min-h-screen items-center justify-center md:flex"
+                  className="fixed inset-0 z-40 min-h-screen items-center justify-center flex"
                   initial={{ scale: 0.95 }}
                   animate={{ scale: 1 }}
                   exit={{ scale: 0.95 }}
@@ -67,7 +65,6 @@ export default function Modal({
                 onClick={() => setShowModal(false)}
               />
             </>
-          )}
         </>
       )}
     </AnimatePresence>

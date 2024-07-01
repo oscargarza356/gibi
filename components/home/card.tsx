@@ -1,8 +1,6 @@
 import { ReactNode } from "react";
-import ReactMarkdown from "react-markdown";
-import Balancer from "react-wrap-balancer";
 import Countdown from "react-countdown";
-import { count } from "node:console";
+
 export default function Card({
   title,
   description,

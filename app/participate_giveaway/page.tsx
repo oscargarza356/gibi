@@ -23,51 +23,68 @@ export async function generateMetadata({ params, searchParams }: Props, parent: 
   let nftName = "";
   let participants = 0;
   let decimalFloorPrice = 0;
-  console.log("geere");
-  await fetch(getGiveawayUrl, {})
+  let isERC20 = false;
+  let response1 = await fetch(getGiveawayUrl, {
+    method: "GET",
+  });
+  let data = await response1.json();
+
+  await fetch(getGiveawayUrl, {
+    method: "GET",
+  })
     .then((response) => response.json())
     .then(async (data) => {
-      console.log(data);
       participants = data.num_of_participants;
-      // load floor price
-      const url =
-        "https://polygon-rest.api.mnemonichq.com/marketplaces/v1beta2/floors/" + data.nft_contract_Address + "?marketplaceId=MARKETPLACE_ID_OPENSEA";
-      const headers = {
-        "X-API-Key": "887VrswXkXC8bzJKvxnrUF2PIR6c8rV55Uo3gAr5X1ZGuBVz",
-        accept: "application/json",
-      };
-      const responseTest = await fetch(url, {
-        method: "GET",
-        headers: headers,
-      });
-      const responseJson = await responseTest.json();
-      floorPrice = responseJson.price.totalNative;
+      nftName = data.prize;
+      nftImageUrl = data.image_link;
 
-      // change floor from string to number
-      floorPrice = parseFloat(floorPrice as any);
-      floorPrice = floorPrice.toFixed(1) as any;
-      console.log("floor price 2: " + decimalFloorPrice);
-
-      console.log("floor price: " + floorPrice);
-      // floor price to 1 decimal
-
-      // load nft image
-      const response2 = await alchemy.nft.getNftMetadata(data.nft_contract_Address, data.nft_token_id);
-      nftName = response2?.rawMetadata?.name as string;
-
-      nftImageUrl = response2?.media[0].gateway as string;
+      if (data.giveaway_type === "ERC-20") {
+        isERC20 = true;
+        // !!! load estimated value
+      } else {
+        // load floor price
+        const url =
+          "https://polygon-rest.api.mnemonichq.com/marketplaces/v1beta2/floors/" +
+          data.nft_contract_Address +
+          "?marketplaceId=MARKETPLACE_ID_OPENSEA";
+        const headers = {
+          "X-API-Key": "887VrswXkXC8bzJKvxnrUF2PIR6c8rV55Uo3gAr5X1ZGuBVz",
+          accept: "application/json",
+        };
+        const responseTest = await fetch(url, {
+          method: "GET",
+          headers: headers,
+        });
+        const responseJson = await responseTest.json();
+        floorPrice = responseJson.price.totalNative;
+        // change floor from string to number
+        floorPrice = parseFloat(floorPrice as any);
+        // floor price to 1 decimal
+        floorPrice = floorPrice.toFixed(1) as any;
+      }
     });
-  // optionally access and extend (rather than replace) parent metadata
-  const previousImages = (await parent).openGraph?.images || [];
-  return {
-    twitter: {
-      card: "summary_large_image",
-      title: "GIBI 🎁 | FP: " + floorPrice.toString() + " MATIC💜 |" + "Entries: " + participants.toString() + "👥",
-      description: "GIBI is the ultimate solution to web3 giveaways embracing a more open and just way of running giveaways on the internet.",
-      creator: "@MaskedDAO",
-      images: [nftImageUrl],
-    },
-  };
+
+  if (isERC20) {
+    return {
+      twitter: {
+        card: "summary_large_image",
+        title: "GIBI 🎁 | " + "Entries: " + participants.toString() + "👥",
+        description: "GIBI is the ultimate solution to web3 giveaways embracing a more open and just way of running giveaways on the internet.",
+        creator: "@MaskedDAO",
+        images: [nftImageUrl],
+      },
+    };
+  } else {
+    return {
+      twitter: {
+        card: "summary_large_image",
+        title: "GIBI 🎁 | FP: " + floorPrice.toString() + " MATIC💜 |" + "Entries: " + participants.toString() + "👥",
+        description: "GIBI is the ultimate solution to web3 giveaways embracing a more open and just way of running giveaways on the internet.",
+        creator: "@MaskedDAO",
+        images: [nftImageUrl],
+      },
+    };
+  }
 }
 
 export default async function CreateNewGiveaway() {

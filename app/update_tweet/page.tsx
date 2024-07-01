@@ -1,14 +1,12 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 import { useState, useEffect } from "react";
-import { getPublicClient } from "@wagmi/core";
-import { Network, Alchemy } from "alchemy-sdk";
 import Image from "next/image";
 import Balancer from "react-wrap-balancer";
-import Popover from "@/components/shared/popover";
 import { useCreateGIBIModal } from "@/components/home/create-giveaway-modal";
-import { useAccount } from "wagmi";
+import { useAccount, useChains } from "wagmi";
 import { useRouter } from "next/navigation";
+
 export default function CreateGiveaway() {
   const [programError, setProgramError] = useState("");
   const [giveawayInfo, setGiveawayInfo] = useState<any>({});
@@ -19,11 +17,8 @@ export default function CreateGiveaway() {
   const { DemoModal, setShowDemoModal, setModalText, setHashText, setLoadingBar } = useCreateGIBIModal();
   const { address } = useAccount();
   const router = useRouter();
-  const settings = {
-    apiKey: "yCMOneYzyO2mxAj0tgxSxSQD8ONiMJIZ",
-    network: Network.MATIC_MAINNET,
-  };
-  const alchemy = new Alchemy(settings);
+  const chains = useChains();
+
   useEffect(() => {
     loadGiveawayInfo();
   }, []);
@@ -44,15 +39,10 @@ export default function CreateGiveaway() {
       .then(async (data) => {
         console.log("data", data);
         setGiveawayInfo(data);
-        // load nft image
-        const publicClient = getPublicClient({
-          chainId: 137,
-        });
+
         console.log("giveawayInfo.token", data.nft_token_id);
-        const response2 = await alchemy.nft.getNftMetadata(data.nft_contract_Address, data.nft_token_id);
-        console.log("image url: ", response2?.rawMetadata?.image);
-        setNFTImage(response2?.media[0].gateway);
-        setNFTName(response2?.rawMetadata?.name as any);
+        setNFTImage(data.image_link);
+        setNFTName(data.prize);
         setGiveawayLink("https://www.gibi.app/participate_giveaway?giveaway_id=" + giveawayId);
       })
       .catch((error) => {
@@ -113,7 +103,7 @@ export default function CreateGiveaway() {
           </h1>
         </div>
         <div className="flex items-center justify-center">
-          <img src={NFTImage} width={250} height={250} className="rounded-xl shadow-md dark:shadow-gray-800" />
+          <Image src={NFTImage} alt="Prize image" width={250} height={250} className="rounded-xl shadow-md dark:shadow-gray-800" />
         </div>
         <h1
           className={

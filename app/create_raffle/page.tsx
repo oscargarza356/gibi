@@ -4,7 +4,7 @@
 import { createPublicClient, http, formatUnits } from "viem";
 import { useState, useRef, useEffect } from "react";
 import Flatpickr from "react-flatpickr";
-import GibiStorage from "../../contracts/GibiStorage.json";
+import GibiBase from "../../contracts/GibiBase.json";
 import PixelOpepen from "../../contracts/PixelOpepen.json";
 import "flatpickr/dist/themes/material_green.css";
 import flatpickr from "flatpickr";
@@ -13,9 +13,9 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useNftModal } from "@/components/home/nft-modal";
 import { Network, Alchemy } from "alchemy-sdk";
-import Tooltip from "@/components/shared/tooltip";
 import { useERC20Modal } from "@/components/home/erc20-modal";
 import { useWriteContract, useClient, useChains, useAccount, useChainId } from "wagmi";
+import BasedCoin from "../../contracts/BasedCoin.json";
 import { base, polygon } from 'viem/chains'
 
 export default function CreateGiveaway() {
@@ -31,7 +31,6 @@ export default function CreateGiveaway() {
   const { DemoModal, setShowDemoModal, setModalText, setHashText } = useCreateGIBIModal();
   const [programError, setProgramError] = useState("");
   const [discord, setDiscord] = useState("");
-  const [discordInvite, setDiscordInvite] = useState("");
   const [discordServerName, setDiscordServerName] = useState("");
   const [discordGuildID, setDiscordGuildID] = useState("");
   const [erc20Active, setErc20Active] = useState(false);
@@ -39,17 +38,15 @@ export default function CreateGiveaway() {
   const { ERC20Modal, setShowERC20Modal } = useERC20Modal();
   const [choosenNft, setChoosenNft] = useState<any>(null);
   const [nftButtonText, setnftButtonText] = useState<String>("Attach NFT");
-  const [retweetCheck, setRetweetCheck] = useState(false);
-  const [commentCheck, setCommentCheck] = useState(false);
-  const [followAccount, setFollowAccount] = useState("");
   const [isERC1155, setIsERC1155] = useState(false);
   const [amount, setAmount] = useState(0);
   const chains = useChains();
   const chainId = useChainId();
+
   // aclhemy set up
   const settings = {
     apiKey: "yCMOneYzyO2mxAj0tgxSxSQD8ONiMJIZ",
-    network: Network.MATIC_MAINNET,
+    network: Network.BASE_MAINNET,
   };
   const alchemy = new Alchemy(settings);
 
@@ -106,15 +103,10 @@ export default function CreateGiveaway() {
       return;
     }
     client?.request;
+
     const wallet = client;
     setShowDemoModal(true);
     setHashText("");
-
-    let contractAddress = "0xfBE2fdA5554f08E22cDc36B70290186cb9f74641";
-    if (chainId == 8453) {
-      contractAddress = "0xFBEAA02142F2F3286DC448f49dbFCFfB1965465A";
-    }
-
     try {
       let publicCLient = createPublicClient({
         chain: base,
@@ -131,9 +123,9 @@ export default function CreateGiveaway() {
 
       // Check if a giveaway entry exists for this nft
       const giveaways = await publicCLient.readContract({
-        address: contractAddress as `0x${string}`,
-        abi: GibiStorage.abi,
-        functionName: "getUserGiveaways",
+        address: "0xb27b8faA75aF44730bF89Ea603e6C367B7CE4BFa",
+        abi: GibiBase.abi,
+        functionName: "getUserRaffles",
         args: [account.address],
       });
       // Define the NFT token you want to check
@@ -157,14 +149,16 @@ export default function CreateGiveaway() {
       let amount_to_approve = 0;
       // CHECK FOR approval ERC20
       if (erc20Active) {
+        console.log("ERC20 ACTIVE", nftAddress as `0x${string}`);
+        console.log(account.address);
         let decimals = (await alchemy.core.getTokenMetadata(nftAddress)) as any;
         amount_to_approve = amount * Math.pow(10, decimals.decimals);
         // !! call the function that reads how much has been aproved
         const allowance = (await publicCLient.readContract({
           address: nftAddress as `0x${string}`,
-          abi: PixelOpepen.abi,
+          abi: BasedCoin.abi,
           functionName: "allowance",
-          args: [account.address, contractAddress],
+          args: [account.address, "0xb27b8faA75aF44730bF89Ea603e6C367B7CE4BFa"],
         })) as number;
         console.log("allowance", allowance);
         console.log("it ends heere");
@@ -181,7 +175,7 @@ export default function CreateGiveaway() {
           address: nftAddress as `0x${string}`,
           abi: PixelOpepen.abi,
           functionName: "isApprovedForAll",
-          args: [account.address, contractAddress],
+          args: [account.address, "0xb27b8faA75aF44730bF89Ea603e6C367B7CE4BFa"],
         })) as boolean;
       }
 
@@ -197,7 +191,7 @@ export default function CreateGiveaway() {
               address: nftAddress as `0x${string}`,
               abi: PixelOpepen.abi,
               functionName: "approve",
-              args: [contractAddress, amount_to_approve],
+              args: ["0xb27b8faA75aF44730bF89Ea603e6C367B7CE4BFa", amount_to_approve],
             },
             {
               onSuccess: async (hash) => {
@@ -239,7 +233,7 @@ export default function CreateGiveaway() {
               address: nftAddress as `0x${string}`,
               abi: PixelOpepen.abi,
               functionName: "setApprovalForAll",
-              args: [contractAddress, true],
+              args: ["0xb27b8faA75aF44730bF89Ea603e6C367B7CE4BFa", true],
             },
             {
               onSuccess: async (hash) => {
@@ -306,10 +300,10 @@ export default function CreateGiveaway() {
         console.log(amount_to_approve.toString());
         const hash2 = await writeContractAsync(
           {
-            address: contractAddress as `0x${string}`,
-            abi: GibiStorage.abi,
-            functionName: "createGiveaway",
-            args: [nftAddress, tokenIDToUse, isERC1155, erc20Active, amount_to_approve],
+            address: "0xb27b8faA75aF44730bF89Ea603e6C367B7CE4BFa",
+            abi: GibiBase.abi,
+            functionName: "createRaffle",
+            args: [nftAddress, tokenIDToUse, isERC1155, erc20Active, amount_to_approve, amount_to_approve],
           },
           {
             onSuccess: async (hash) => {
@@ -374,12 +368,8 @@ export default function CreateGiveaway() {
           giveaway_name: "N/A",
           end_date: selectedUnixTime,
           discord_guild_id: discordGuildID,
-          discord_invite_link: discordInvite,
           discord_guild_name: discordServerName,
           prize: giveaway_prize,
-          follow_account: followAccount,
-          retweet_check: retweetCheck,
-          comment_check: commentCheck,
           x_signature: storedSignature,
           x_message: storedMessage,
           is_ERC1155: isERC1155,
@@ -392,12 +382,7 @@ export default function CreateGiveaway() {
         if (response.ok) {
           // read response it should contain the giveaway id
           const data = await response.json();
-          // redirect user to the participate_giveaway page with the giveaway id
-          if (retweetCheck || commentCheck) {
-            router.push(`/update_tweet?giveaway_id=${data.giveaway_id}`);
-          } else {
-            router.push(`/participate_giveaway?giveaway_id=${data.giveaway_id}`);
-          }
+          router.push(`/participate_giveaway?giveaway_id=${data.giveaway_id}`);
         } else {
           // Error
           console.log("Failed to create giveaway");
@@ -415,22 +400,6 @@ export default function CreateGiveaway() {
       setModalText(e?.toString() as string);
       setProgramError(e?.toString() as string);
     }
-  }
-
-  async function handleDiscordServerGet() {
-    setDiscord("loading");
-    const inviteCode = discordInvite.split("/").pop();
-    const response = await fetch("https://discord.com/api/invite/" + inviteCode);
-    // check that response is 200 otherwise show error
-    if (response.status !== 200) {
-      setDiscord("");
-      setProgramError("Please enter a valid discord invite");
-      return;
-    }
-    const message = await response.json();
-    setDiscordServerName(message.guild["name"]);
-    setDiscordGuildID(message.guild["id"]);
-    setDiscord("loaded");
   }
 
   const handleCloseAndSave = (data: any) => {
@@ -486,133 +455,6 @@ export default function CreateGiveaway() {
               </div>
             </div>
           </div>
-          <div className=" items-center justify-center md:flex md:items-center mb-6">
-            <div className=" items-center justify-center md:w-2/3">
-              <p className="text-gray-500 font-bold mb-1 pr-4">Require Discord(optional)</p>
-              {discord === "" ? (
-                <div style={{ display: "flex", alignItems: "center" }}>
-                  <button
-                    type="button"
-                    onClick={handleDiscordServerGet}
-                    className="text-white font-bold bg-gray-500 hover:bg-gray-700  focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-full text-sm p-2.5 text-center inline-flex items-center mr-2 dark:bg-gray-500  dark:hover:bg-gray-700 dark:focus:ring-gray-800">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke-width="5"
-                      stroke="currentColor"
-                      className="w-4 h-4">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                    </svg>
-                  </button>
-                  <input
-                    className="bg-gray-200 appearance-none border-2 border-gray-200 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:bg-white focus:border-purple-500"
-                    id="nft_id"
-                    placeholder="i.e Discord Invite Link"
-                    onChange={(e) => {
-                      setDiscordInvite(e.target.value);
-                    }}
-                  />
-                </div>
-              ) : discord === "loading" ? (
-                <div style={{ display: "flex", alignItems: "center" }}>
-                  <button
-                    type="button"
-                    className="text-white font-bold bg-gray-500 hover:bg-gray-700  focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-full text-sm p-2.5 text-center inline-flex items-center mr-2 dark:bg-gray-500  dark:hover:bg-gray-700 dark:focus:ring-gray-800">
-                    <svg
-                      aria-hidden="true"
-                      role="status"
-                      className="inline w-4 h-4 mr-3 text-white animate-spin"
-                      viewBox="0 0 100 101"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg">
-                      <path
-                        d="M100 50.5908C100 78.2051 77.6142 100.591 50 100.591C22.3858 100.591 0 78.2051 0 50.5908C0 22.9766 22.3858 0.59082 50 0.59082C77.6142 0.59082 100 22.9766 100 50.5908ZM9.08144 50.5908C9.08144 73.1895 27.4013 91.5094 50 91.5094C72.5987 91.5094 90.9186 73.1895 90.9186 50.5908C90.9186 27.9921 72.5987 9.67226 50 9.67226C27.4013 9.67226 9.08144 27.9921 9.08144 50.5908Z"
-                        fill="#E5E7EB"
-                      />
-                      <path
-                        d="M93.9676 39.0409C96.393 38.4038 97.8624 35.9116 97.0079 33.5539C95.2932 28.8227 92.871 24.3692 89.8167 20.348C85.8452 15.1192 80.8826 10.7238 75.2124 7.41289C69.5422 4.10194 63.2754 1.94025 56.7698 1.05124C51.7666 0.367541 46.6976 0.446843 41.7345 1.27873C39.2613 1.69328 37.813 4.19778 38.4501 6.62326C39.0873 9.04874 41.5694 10.4717 44.0505 10.1071C47.8511 9.54855 51.7191 9.52689 55.5402 10.0491C60.8642 10.7766 65.9928 12.5457 70.6331 15.2552C75.2735 17.9648 79.3347 21.5619 82.5849 25.841C84.9175 28.9121 86.7997 32.2913 88.1811 35.8758C89.083 38.2158 91.5421 39.6781 93.9676 39.0409Z"
-                        fill="green"
-                      />
-                    </svg>
-                  </button>
-                  <input
-                    className="bg-gray-200 appearance-none border-2 border-gray-200 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:bg-white focus:border-purple-500"
-                    id="nft_id"
-                    placeholder="Discord Invite Link"
-                    onChange={(e) => {
-                      setTokenId(e.target.value);
-                    }}
-                  />
-                </div>
-              ) : (
-                <div style={{ display: "flex", alignItems: "center" }}>
-                  <button
-                    type="button"
-                    className="text-white font-bold bg-green-500 hover:bg-green-700  font-medium rounded-full text-sm p-2.5 text-center inline-flex items-center mr-2 dark:bg-green-500  dark:hover:bg-green-700">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke-width="4"
-                      stroke="currentColor"
-                      className="w-4 h-4">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                    </svg>
-                  </button>
-                  <p>{discordServerName}</p>
-                </div>
-              )}
-            </div>
-          </div>
-          <div className=" items-center justify-center md:flex md:items-center mb-6">
-            <div className=" items-center justify-center md:w-2/3">
-              <p className="text-gray-500 font-bold mb-1 pr-4">Require 𝕏 Follow(optional)</p>
-              <div style={{ display: "flex", alignItems: "center" }}>
-                <input
-                  className="bg-gray-200 appearance-none border-2 border-gray-200 rounded w-full py-2 px-4 text-gray-700 leading-tight focus:outline-none focus:bg-white focus:border-purple-500"
-                  id="nft_id"
-                  placeholder="i.e @GIBI_bot"
-                  onChange={(e) => {
-                    setFollowAccount(e.target.value);
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-          <div className=" items-center justify-center md:flex md:items-center mb-6">
-            <div className=" items-center justify-center md:w-2/3">
-              <Tooltip
-                content="This is a manual parameter, after creating the gibi the creator will need to go to their gibi profile in the right upper corner click(🎁), select the giveaway to update and add the tweet that contains the gibi link.
-              Creators are also responsible to DRAW the winner if they choose these 𝕏 parameters, once the gibi has ended they will be given a time window of 30 minutes in which they are responsible to go to their gibi profile select the gibi, draw the winner and check that they completed these requirements otherwise disqualify
-              the participant. If the creator misses the time window then the winner will be automatically drawed without checking if the winner retweeted">
-                <p className="text-gray-500 font-bold mb-1 pr-4">𝕏 config ⚠</p>
-              </Tooltip>
-              <div className="flex items-center">
-                <input
-                  id="default-checkbox"
-                  type="checkbox"
-                  value=""
-                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-500 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2"
-                  checked={retweetCheck}
-                  onChange={() => setRetweetCheck(!retweetCheck)} // Toggle the state directly
-                />
-                <label className="text-gray-500 font-bold mb-1 pr-4 pl-1.5"> Require retweet</label>
-              </div>
-              <div className="flex items-center">
-                <input
-                  id="default-checkbox"
-                  type="checkbox"
-                  value=""
-                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-500 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2"
-                  checked={commentCheck}
-                  onChange={() => setCommentCheck(!commentCheck)} // Toggle the state directly
-                />
-                <label className="text-gray-500 font-bold mb-1 pr-4 pl-1.5"> Require comment</label>
-              </div>
-            </div>
-          </div>
-
           <div className="flex flex-col items-center justify-center space-y-4">
             <button
               className="py-3 px-4 uppercase text-xs font-bold cursor-pointer tracking-wider text-pink-500 border-pink-500 border-2 hover:bg-pink-500 hover:text-white transition ease-out duration-700"

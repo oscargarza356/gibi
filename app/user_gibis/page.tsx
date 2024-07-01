@@ -1,12 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getAccount, readContract } from "@wagmi/core";
+import { useAccount, useReadContract, useChains } from "wagmi";
 import GibiStorage from "../../contracts/GibiStorage.json";
 import { parse } from "path";
+import Image from "next/image";
+import { createPublicClient, http, formatUnits } from "viem";
+import { base, polygon } from 'viem/chains'
 export default function UserGibis() {
   // call backend to get user gibis
-  const account = getAccount();
+  const account = useAccount();
   interface Product {
     id: string;
     link: string;
@@ -17,18 +20,21 @@ export default function UserGibis() {
     status: string;
     openseaLink: string;
   }
+  const chains = useChains();
 
   const productsType: Product[] = [
     // ... your product data
   ];
 
   const [products, setProducts] = useState(productsType);
+
   // async get user gibis
   useEffect(() => {
     getUserGIBIS();
   }, []);
 
   // this retries the giveawy
+  // does this serve any purpose???
   async function retryGiveaway(giveaway_id: string) {
     const storedSignature = localStorage.getItem("signature" + account.address);
     const storedMessage = localStorage.getItem("message" + account.address);
@@ -51,7 +57,6 @@ export default function UserGibis() {
       alert("failed");
     }
   }
-
   async function getUserGIBIS() {
     const storedSignature = localStorage.getItem("signature" + account.address);
     const storedMessage = localStorage.getItem("message" + account.address);
@@ -69,12 +74,15 @@ export default function UserGibis() {
     console.log("sdfasdfasdfasd", data);
 
     // get gibis in the contract
-    const gibis: { ended: boolean; nftTokenAddress: string; tokenId: any }[] = (await readContract({
+    let publicCLient = createPublicClient({
+      chain: polygon,
+      transport: http(),
+    });
+    const gibis: { ended: boolean; nftTokenAddress: string; tokenId: any }[] = (await publicCLient.readContract({
       address: "0xfBE2fdA5554f08E22cDc36B70290186cb9f74641",
       abi: GibiStorage.abi,
       functionName: "getUserGiveaways",
       args: [account.address],
-      chainId: 137,
     })) as { ended: boolean; nftTokenAddress: string; tokenId: any }[];
     // loop through gibis and compare it to data
     let holderArray: any[] = [];
@@ -82,9 +90,6 @@ export default function UserGibis() {
       if (gibis[i].ended) {
         continue;
       }
-      // console.log("hash", gibis[i].ended);
-      // console.log("hash", gibis[i].nftTokenAddress);
-      // console.log("hash", parseInt(gibis[i].tokenId));
       // loop data
       let stuck = true;
       for (let j = 0; j < data.length; j++) {
@@ -139,6 +144,14 @@ export default function UserGibis() {
 
   return (
     <>
+      <Image
+        src="/created.png"
+        className={`animate-fade-up bg-gradient-to-br to-pink-500 bg-clip-text text-center font-display text-4xl font-bold tracking-[-0.02em] text-transparent opacity-0 drop-shadow-sm md:text-7xl md:leading-[5rem]`}
+        style={{ animationDelay: "0.15s", animationFillMode: "forwards" }}
+        alt="GIBI Logo"
+        width={400}
+        height={10}
+      />
       <div className="relative overflow-x-auto shadow-md sm:rounded-lg">
         <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
           <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">

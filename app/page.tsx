@@ -1,34 +1,38 @@
 "use client";
 import Balancer from "react-wrap-balancer";
 import Image from "next/image";
-import { connect, getNetwork, switchNetwork, getAccount } from "@wagmi/core";
 import { polygon } from "@wagmi/core/chains";
-import { InjectedConnector } from "@wagmi/core/connectors/injected";
 import { useCreateGIBIModal } from "@/components/home/create-giveaway-modal";
-import { signMessage } from "@wagmi/core";
 import { SiweMessage } from "siwe";
 import { useRouter } from "next/navigation";
 import { useCreateSIGNModal } from "@/components/home/sign-modal";
-import { use, useState, useEffect } from "react";
-import { watchAccount } from "@wagmi/core";
-import { useConnectModal, useAccountModal, useChainModal } from "@rainbow-me/rainbowkit";
+import { useState, useEffect } from "react";
+import { useConnectModal } from "@rainbow-me/rainbowkit";
 import ComponentGrid from "@/components/home/component-grid";
 import Card from "@/components/home/card";
 import { Network, Alchemy } from "alchemy-sdk";
-import test from "node:test";
+import { useSwitchChain } from "wagmi";
 import BarLoader from "react-spinners/BarLoader";
+import { useAccountEffect } from "wagmi";
+import { useSignMessage } from "wagmi";
+import { useChainId } from "wagmi";
+import { useAccount } from "wagmi";
 
 export default function Home() {
-  const { DemoModal, setShowDemoModal, setModalText, setHashText } = useCreateGIBIModal();
+  const { DemoModal } = useCreateGIBIModal();
   const { DemoModal: DemoModal2, setShowDemoModal: setShowDemoModal2, setModalText: setModalText2 } = useCreateSIGNModal();
   const [homeSignModal, setHomeSignModal] = useState(false);
-  const domain = window.location.host;
-  const origin = window.location.origin;
   const router = useRouter();
   const connectModal = useConnectModal(); // Assuming useConnectModal() returns an object with openConnectModal property
   const [selectedTab, setSelectedTab] = useState("active");
   const [loadingBar, setLoadingBar] = useState(true);
   const [coneImage, setConeImage] = useState("/CONE1.png");
+  const [domain, setDomain] = useState("");
+  const [origin, setOrigin] = useState("");
+  const { switchChainAsync } = useSwitchChain();
+  const { signMessageAsync } = useSignMessage();
+  const chainId = useChainId();
+  const account = useAccount();
 
   interface Product {
     title: string;
@@ -41,21 +45,76 @@ export default function Home() {
   const productsType: Product[] = [
     // ... your product data
   ];
-
   const [endedGiveaways, setProducts] = useState(productsType);
   const [activeGiveaways, setActiveGiveaways] = useState(productsType);
   const settings = {
     apiKey: "yCMOneYzyO2mxAj0tgxSxSQD8ONiMJIZ",
     network: Network.MATIC_MAINNET,
   };
-
   const alchemy = new Alchemy(settings);
 
   useEffect(() => {
+    setDomain(window.location.host);
+    setOrigin(window.location.origin);
     getActiveGiveaways();
     const randomImageNumber = Math.floor(Math.random() * 3) + 1;
     setConeImage("/CONE" + randomImageNumber + ".png");
   }, []);
+
+  useAccountEffect({
+    onConnect(data) {
+      if (homeSignModal) {
+        console.log("heere11");
+        checkSignatureAndRedirect();
+      }
+    },
+    onDisconnect() {
+      console.log("Disconnected!");
+    },
+  });
+
+  function createSiweMessage(address: any) {
+    const message = new SiweMessage({
+      domain,
+      address: address,
+      statement: "Sign in with Ethereum to the app.",
+      uri: origin,
+      version: "1",
+      chainId: 137,
+    });
+    return message.prepareMessage();
+  }
+
+  async function checkSignatureAndRedirect() {
+    if (!account.isConnected) {
+      console.log("here 22");
+      // setShowDemoModal2(true);
+      setHomeSignModal(true);
+      if (connectModal.openConnectModal) {
+        connectModal.openConnectModal();
+      } else {
+        console.log("ERROR connectModal.openConnectModal is null");
+      }
+    } else {
+      const storedSignature = localStorage.getItem("signature" + account.address);
+      const storedMessage = localStorage.getItem("message" + account.address);
+      console.log(storedMessage);
+      console.log(storedSignature);
+      if (!storedSignature || !storedMessage) {
+        console.log("here 33");
+        const message = createSiweMessage(account.address);
+        try {
+          let signature = await signMessageAsync({ message: message });
+          localStorage.setItem("signature" + account.address, signature);
+          localStorage.setItem("message" + account.address, message);
+        } catch (e) {
+          console.log(e);
+        }
+      }
+      console.log("here 33");
+      router.push("/create_giveaway");
+    }
+  }
 
   async function getActiveGiveaways() {
     const urlActive = process.env.NEXT_PUBLIC_GET_ACTIVE_GIVEAWAYS as string;
@@ -67,13 +126,14 @@ export default function Home() {
     });
     const dataActive = await responseActive.json();
     let activeGiveaways = dataActive.reverse().slice(0, 20);
+    console.log("activeGiveaways", activeGiveaways);
     for (let i = 0; i < activeGiveaways.length; i++) {
-      const response2 = await alchemy.nft.getNftMetadata(activeGiveaways[i].nft_contract_Address, activeGiveaways[i].nft_token_id);
-      activeGiveaways[i].title = response2?.rawMetadata?.name;
+      activeGiveaways[i].title = activeGiveaways[i].prize;
       const link = "participate_giveaway?giveaway_id=" + activeGiveaways[i].id;
+      console.log("imaaagen", activeGiveaways[i].image_link);
       activeGiveaways[i].demo = (
         <a href={link}>
-          <Image src={response2?.media[0].gateway as string} alt="GIBI" width={340} height={340} unoptimized />
+          <Image src={activeGiveaways[i].image_link as string} alt="GIBI" width={340} height={340} unoptimized />
         </a>
       );
       console.log("activeGiveaways[i].end_date", activeGiveaways[i].end_date);
@@ -97,82 +157,25 @@ export default function Home() {
     console.log("endedGiveaways", endedGiveaways);
     // loop through data and get image url
     for (let i = 0; i < endedGiveaways.length; i++) {
-      const response2 = await alchemy.nft.getNftMetadata(endedGiveaways[i].nft_contract_Address, endedGiveaways[i].nft_token_id);
-      endedGiveaways[i].title = response2?.rawMetadata?.name;
+      if (endedGiveaways[i].giveaway_type == "ERC-20") {
+        endedGiveaways[i].title = endedGiveaways[i].prize;
+      } else {
+        endedGiveaways[i].title = endedGiveaways[i].prize;
+        endedGiveaways[i].openseaLink =
+          "https://opensea.io/assets/matic/" + endedGiveaways[i].nft_contract_Address + "/" + endedGiveaways[i].nft_token_id;
+      }
       const link = "participate_giveaway?giveaway_id=" + endedGiveaways[i].id;
-      console.log(response2?.media[0].gateway);
       endedGiveaways[i].demo = (
         <a href={link}>
-          <Image src={response2?.media[0].gateway as string} alt="GIBI" width={340} height={340} unoptimized />
+          <Image src={endedGiveaways[i].image_link} alt="GIBI" width={340} height={340} unoptimized />
         </a>
       );
       endedGiveaways[i].large = false;
       endedGiveaways[i].description = "endedGiveaways";
-      endedGiveaways[i].openseaLink =
-        "https://opensea.io/assets/matic/" + endedGiveaways[i].nft_contract_Address + "/" + endedGiveaways[i].nft_token_id;
     }
     // data first 10 elements
     setProducts(endedGiveaways);
-
     setLoadingBar(false);
-  }
-
-  const unwatch = watchAccount((account) => {
-    if (account.isConnected) {
-      if (homeSignModal) {
-        setHomeSignModal(false);
-        checkSignatureAndRedirect();
-      }
-    }
-  });
-
-  function createSiweMessage() {
-    const { chain, chains } = getNetwork();
-    const account = getAccount();
-    const message = new SiweMessage({
-      domain,
-      address: account.address,
-      statement: "test",
-      uri: origin,
-      version: "1",
-      chainId: 1,
-    });
-    return message.prepareMessage();
-  }
-
-  async function checkSignatureAndRedirect() {
-    const { chain, chains } = getNetwork();
-    const account = getAccount();
-    if (!account.isConnected) {
-      console.log("here 22");
-      // setShowDemoModal2(true);
-      setHomeSignModal(true);
-      if (connectModal.openConnectModal) {
-        connectModal.openConnectModal();
-      } else {
-        console.log("ERROR connectModal.openConnectModal is null");
-      }
-    } else {
-      console.log("heeere111");
-      if (chain?.id !== polygon.id) {
-        const network = await switchNetwork({
-          chainId: polygon.id,
-        });
-      }
-      const storedSignature = localStorage.getItem("signature" + account.address);
-      const storedMessage = localStorage.getItem("message" + account.address);
-      if (!storedSignature || !storedMessage) {
-        setModalText("Please Verify Your account by signing the message in your wallet.");
-        setShowDemoModal(true);
-        const message = createSiweMessage();
-        const signature = await signMessage({
-          message: message,
-        });
-        localStorage.setItem("signature" + account.address, signature);
-        localStorage.setItem("message" + account.address, message);
-      }
-      router.push("/create_giveaway");
-    }
   }
 
   const handleTabClick = (tab: "active" | "ended") => {
@@ -222,22 +225,20 @@ export default function Home() {
         <ul className="flex flex-wrap -mb-px">
           <li className="mr-2">
             <p
-              className={`inline-block p-4 border-b-2 ${
-                selectedTab === "active"
+              className={`inline-block p-4 border-b-2 ${selectedTab === "active"
                   ? "border-blue-600 text-blue-600"
                   : "border-transparent text-gray-800 dark:text-gray-400 hover:text-gray-600 hover:border-gray-300"
-              } rounded-t-lg  `}
+                } rounded-t-lg  `}
               onClick={() => handleTabClick("active")}>
               Active
             </p>
           </li>
           <li className="mr-2">
             <p
-              className={`inline-block p-4 border-b-2 ${
-                selectedTab === "ended"
+              className={`inline-block p-4 border-b-2 ${selectedTab === "ended"
                   ? "border-blue-600 text-blue-600"
                   : "border-transparent text-gray-800 dark:text-gray-400 hover:text-gray-600 hover:border-gray-300"
-              } rounded-t-lg  `}
+                } rounded-t-lg  `}
               onClick={() => handleTabClick("ended")}>
               Ended
             </p>
@@ -245,31 +246,37 @@ export default function Home() {
         </ul>
       </div>
       <div className="justify-center mt-4 animate-fade-up items-center  opacity-0" style={{ animationDelay: "0.35s", animationFillMode: "forwards" }}>
-        <BarLoader loading={loadingBar} aria-label="Loading Spinner" data-testid="loader" color="green" />
+      <BarLoader loading={loadingBar} aria-label="Loading Spinner" data-testid="loader" color="green" />
       </div>
+      <div className="justify-center mt-4 animate-fade-up items-center  opacity-0" style={{ animationDelay: "0.35s", animationFillMode: "forwards" }}>
+        {selectedTab === "active" && activeGiveaways.length === 0 && (
+              <p className="text-center text-gray-500">There are no active giveaways.</p>
+            )}      
+      </div>
+
       <div className="my-2 grid w-full max-w-screen-lg animate-fade-up grid-cols-2 gap-5 px-5 md:grid-cols-4 xl:px-0">
         {selectedTab == "active"
           ? activeGiveaways.map((product, index) => (
-              <Card
-                key={index}
-                title={product.title}
-                description={product.description}
-                demo={product.title === "Beautiful, reusable components" ? <ComponentGrid /> : product.demo}
-                large={product.large}
-                countDownDate={product.end_date}
-                openseaLink={product.openseaLink}
-              />
-            ))
+            <Card
+              key={index}
+              title={product.title}
+              description={product.description}
+              demo={product.title === "Beautiful, reusable components" ? <ComponentGrid /> : product.demo}
+              large={product.large}
+              countDownDate={product.end_date}
+              openseaLink={product.openseaLink}
+            />
+          ))
           : endedGiveaways.map((product, index) => (
-              <Card
-                key={index}
-                title={product.title}
-                description={product.description}
-                demo={product.title === "Beautiful, reusable components" ? <ComponentGrid /> : product.demo}
-                large={product.large}
-                countDownDate={product.end_date}
-              />
-            ))}
+            <Card
+              key={index}
+              title={product.title}
+              description={product.description}
+              demo={product.title === "Beautiful, reusable components" ? <ComponentGrid /> : product.demo}
+              large={product.large}
+              countDownDate={product.end_date}
+            />
+          ))}
       </div>
     </>
   );

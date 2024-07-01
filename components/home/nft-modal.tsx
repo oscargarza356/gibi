@@ -5,6 +5,7 @@ import { Alchemy, Network, NftFilter, NftFilters, NftOrdering } from "alchemy-sd
 import { getAccount } from "@wagmi/core";
 import { useEffect } from "react";
 import BarLoader from "react-spinners/BarLoader";
+import { useAccount } from "wagmi";
 type NftModalProps = {
   showNftModal: boolean;
   setShowNftModal: Dispatch<SetStateAction<boolean>>;
@@ -15,6 +16,7 @@ const NftModal = ({ showNftModal, setShowNftModal, onCloseAndSave }: NftModalPro
   const [loadingBar, setLoadingBar] = useState(true);
   const [searching, setSearching] = useState("");
   const [searchValue, setSearchValue] = useState("");
+  const account = useAccount();
   interface NFTListType {
     rawMetadata: any;
     media: any;
@@ -43,7 +45,7 @@ const NftModal = ({ showNftModal, setShowNftModal, onCloseAndSave }: NftModalPro
   };
   const settings = {
     apiKey: "yCMOneYzyO2mxAj0tgxSxSQD8ONiMJIZ",
-    network: Network.MATIC_MAINNET,
+    network: Network.BASE_MAINNET,
   };
 
   useEffect(() => {
@@ -52,20 +54,17 @@ const NftModal = ({ showNftModal, setShowNftModal, onCloseAndSave }: NftModalPro
 
   async function getNFTs() {
     const alchemy = new Alchemy(settings);
-    const account = getAccount();
     // Wallet address
     const address = account.address as string;
     let nftList: any = [];
     // Get all NFTs --------------------------------------------------------------
     let pageKey = "1";
     while (pageKey != null) {
-      console.log("heere", pageKey);
       if (pageKey == "1") {
         const transferTime = "transferTime";
         const test: string[] = ["SPAM"];
-        const nft = await alchemy.nft.getNftsForOwner(address, { orderBy: transferTime as NftOrdering, excludeFilters: [NftFilters.SPAM] });
+        const nft = await alchemy.nft.getNftsForOwner(address, { orderBy: transferTime as NftOrdering });
         pageKey = nft["pageKey"] as string;
-        console.log("222", nft);
         // loop the list and add to nftList while excluding each row ehre the tokenType is equal to "ERC1155"
         nft["ownedNfts"].forEach((element: any) => {
           if (element.rawMetadata?.name !== "" && typeof element.rawMetadata?.name === "string") {
@@ -103,9 +102,9 @@ const NftModal = ({ showNftModal, setShowNftModal, onCloseAndSave }: NftModalPro
     }
     // Parse output
     // const nfts2 = await alchemy.nft.getNftsForOwner(address, { pageKey: nfts["pageKey"] });
-    console.log("111", nftList);
-    console.log("3333", nftList);
     // only the first 10 elements
+    console.log("aqyuuu", nftList);
+    console.log("aquisaifud", nftList[0]);
     setLoadingBar(false);
     setNftList(nftList);
   }
@@ -161,7 +160,7 @@ const NftModal = ({ showNftModal, setShowNftModal, onCloseAndSave }: NftModalPro
                     handleSelect(nft);
                     setShowNftModal(false);
                   }}>
-                  <img
+                  <Image
                     className="rounded-xl shadow-md dark:shadow-gray-800"
                     key={index}
                     src={nft.media[0].gateway}
